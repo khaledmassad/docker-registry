@@ -1,0 +1,30 @@
+version: 0.1
+storage:
+  s3:
+    accesskey: **********
+    secretkey: **********
+    region: us-east-1
+    bucket: **********
+    encrypt: false
+    secure: true
+    v4auth: true
+    chunksize: 51214400
+    rootdirectory: /registry-v2
+  delete:
+    enabled: true
+redis:
+  addr: **********:6379
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+http:
+  addr: :5000
+  secret: **********
+  headers:
+    X-Content-Type-Options: [nosniff]
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

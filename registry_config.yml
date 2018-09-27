@@ -1,0 +1,39 @@
+version: 0.1
+log:
+  level: debug
+
+storage:
+  s3:
+    accesskey: **********
+    secretkey: **********
+    region: us-east-1
+    bucket: **********
+    encrypt: false
+    secure: true
+    v4auth: true
+    chunksize: 51214400
+    rootdirectory: /registry-v2
+  delete:
+    enabled: true
+http:
+  addr: :5000
+  secret: **********
+  headers:
+    X-Content-Type-Options: [nosniff]
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+redis:
+  addr: **********:6379
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+auth:
+  token:
+    realm: "**********"
+    service: "Docker registry"
+    issuer: "Aurea auth server"
+    rootcertbundle: "/cert.pem"

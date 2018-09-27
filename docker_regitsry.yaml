@@ -1,0 +1,377 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name:  apache
+  namespace: central-docker-prod
+  labels:
+    trilogy.v3.mapped-ip: "10.69.129.34"
+    trilogy.v3.mapped-ports-tcp: "443"
+    trilogy.v3.smart-nat-l3: "service"
+spec:
+  type: ClusterIP
+  selector:
+    app: prod-docker-registry-apache-1
+  ports:
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+---
+#    links:
+#      - prod_docker-registry_registry_2:registry2
+#      - prod_docker-registry_registry_1:registry
+#      - prod_docker-registry_ui_1:ui
+#      - prod_docker-registry_auth_1:auth-server
+####docker-registry-apache####
+apiVersion: apps/v1beta2 # for versions before 1.8.0 use apps/v1beta1
+kind: Deployment
+metadata:
+  name: prod-docker-registry-apache-1
+  namespace: central-docker-prod
+spec:
+  selector:
+    matchLabels:
+      app: prod-docker-registry-apache-1
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      labels:
+        app: prod-docker-registry-apache-1
+      annotations:
+        com.trilogy.company: Aurea
+        com.trilogy.team: Central
+        com.trilogy.product: docker-registry
+        com.trilogy.service: apache
+        com.trilogy.stage: prod
+        com.trilogy.maintainer.email: khaled.massad@aurea.com
+        com.trilogy.maintainer.slack: khaled.massad
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-node-1
+      containers:
+      - name: prod-docker-registry-apache-1
+        image: httpd:2.4
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 443
+        - containerPort: 80
+        volumeMounts:
+        - name: prod-docker-registry-apache-httpd
+          mountPath: /usr/local/apache2/conf/httpd.conf
+        - name: prod-docker-registry-apache-star-swarm-devfactory
+          mountPath: /usr/local/apache2/conf/star_swarm_devfactory.pem
+        - name: prod-docker-registry-apache-star-swarm-devfactory-key
+          mountPath: /usr/local/apache2/conf/star_swarm_devfactory_key.pem
+        - name: prod-docker-registry-apache-star-devfactory
+          mountPath: /usr/local/apache2/conf/star_devfactory.pem
+        - name: prod-docker-registry-apache-star-devfactory-key
+          mountPath: /usr/local/apache2/conf/star_devfactory_key.pem
+        - name: prod-docker-registry-apache-digicertca
+          mountPath: /usr/local/apache2/conf/DigiCertCA.crt
+      volumes:
+      - name: prod-docker-registry-apache-httpd
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/httpd.conf
+         type: FileOrCreate
+      - name: prod-docker-registry-apache-star-swarm-devfactory
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/star_swarm_devfactory.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-apache-star-swarm-devfactory-key
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/star_swarm_devfactory_key.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-apache-star-devfactory
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/star_devfactory.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-apache-star-devfactory-key
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/star_devfactory_key.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-apache-digicertca
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/DigiCertCA.crt
+         type: FileOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-server
+#  name: prod-docker-registry-auth-1
+  namespace: central-docker-prod
+  labels:
+    app: prod-docker-registry-auth-1
+spec:
+  type: ClusterIP
+  selector:
+    app: prod-docker-registry-auth-1
+  ports:
+  - protocol: TCP
+    port: 5001
+    targetPort: 5001
+---
+#entrypoint:
+#  - /docker_auth/auth_server
+#  - "/config/auth_config.yml"
+apiVersion: apps/v1beta2 # for versions before 1.8.0 use apps/v1beta1
+kind: Deployment
+metadata:
+  name: prod-docker-registry-auth-1
+  namespace: central-docker-prod
+spec:
+  selector:
+    matchLabels:
+      app: prod-docker-registry-auth-1
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      labels:
+        app: prod-docker-registry-auth-1
+      annotations:
+        com.trilogy.company: Aurea
+        com.trilogy.team: Central
+        com.trilogy.product: docker-registry
+        com.trilogy.service: auth
+        com.trilogy.stage: prod
+        com.trilogy.maintainer.email: khaled.massad@aurea.com
+        com.trilogy.maintainer.slack: khaled.massad
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-node-1
+      containers:
+      - name: prod-docker-registry-auth-1
+        image: cesanta/docker_auth:stable
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5001
+        volumeMounts:
+        - name: prod-docker-registry-auth-1-auth-config
+          mountPath: /config/auth_config.yml
+        - name: prod-docker-registry-auth-1-auth-passwd
+          mountPath: /config/auth_passwd
+        - name: prod-docker-registry-auth-1-cert-pem
+          mountPath: /config/certs/cert.pem
+        - name: prod-docker-registry-auth-1-key-pem
+          mountPath: /config/certs/key.pem
+      volumes:
+      - name: prod-docker-registry-auth-1-auth-config
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/auth_config.yml
+         type: FileOrCreate
+      - name: prod-docker-registry-auth-1-auth-passwd
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/auth_passwd
+         type: FileOrCreate
+      - name: prod-docker-registry-auth-1-cert-pem
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/cert.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-auth-1-key-pem
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/key.pem
+         type: FileOrCreate
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: ui
+#  name:  prod-docker-registry-ui-1
+  namespace: central-docker-prod
+  labels:
+    trilogy.v3.mapped-ip: "10.69.129.34"
+    trilogy.v3.mapped-ports-tcp: "8443"
+    trilogy.v3.smart-nat-l3: "service"
+spec:
+  type: ClusterIP
+  selector:
+    app: prod-docker-registry-ui-1
+  ports:
+  - port: 8443
+    targetPort: 8443
+    protocol: TCP
+---
+apiVersion: apps/v1beta2 # for versions before 1.8.0 use apps/v1beta1
+kind: Deployment
+metadata:
+  name: prod-docker-registry-ui-1
+  namespace: central-docker-prod
+spec:
+  selector:
+    matchLabels:
+      app: prod-docker-registry-ui-1
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      labels:
+        app: prod-docker-registry-ui-1
+      annotations:
+        com.trilogy.company: Aurea
+        com.trilogy.team: Central
+        com.trilogy.product: docker-registry
+        com.trilogy.service: ui
+        com.trilogy.stage: prod
+        com.trilogy.maintainer.email: khaled.massad@aurea.com
+        com.trilogy.maintainer.slack: khaled.massad
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-node-1
+      containers:
+      - name: prod-docker-registry-ui-1
+        image: konradkleine/docker-registry-frontend:v2
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        - containerPort: 8443
+        env:
+        - name: ENV_DOCKER_REGISTRY_HOST
+          value: "registry2"
+        - name: ENV_DOCKER_REGISTRY_PORT
+          value: "5000"
+        - name: ENV_USE_SSL
+          value: "yes"
+        volumeMounts:
+        - name: prod-docker-registry-ui-1-cert-pem
+          mountPath: /etc/apache2/server.crt
+        - name: prod-docker-registry-ui-1-key-pem
+          mountPath: /etc/apache2/server.key
+        - name: prod-docker-registry-ui-1-ports
+          mountPath: /etc/apache2/ports.conf
+      volumes:
+      - name: prod-docker-registry-ui-1-cert-pem
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/cert.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-ui-1-key-pem
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/key.pem
+         type: FileOrCreate
+      - name: prod-docker-registry-ui-1-ports
+        hostPath:
+          path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/ports.conf
+          type: FileOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry2
+#  name: prod-docker-registry-registry-2
+  namespace: central-docker-prod
+  labels:
+    app: prod-docker-registry-registry-2
+spec:
+  type: ClusterIP
+  selector:
+    app: prod-docker-registry-registry-2
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+---
+apiVersion: apps/v1beta2 # for versions before 1.8.0 use apps/v1beta1
+kind: Deployment
+metadata:
+  name: prod-docker-registry-registry-2
+  namespace: central-docker-prod
+spec:
+  selector:
+    matchLabels:
+      app: prod-docker-registry-registry-2
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      labels:
+        app: prod-docker-registry-registry-2
+      annotations:
+        com.trilogy.company: Aurea
+        com.trilogy.team: Central
+        com.trilogy.product: docker-registry
+        com.trilogy.service: registry
+        com.trilogy.stage: prod
+        com.trilogy.maintainer.email: khaled.massad@aurea.com
+        com.trilogy.maintainer.slack: khaled.massad
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-node-1
+      containers:
+      - name: prod-docker-registry-registry-2
+        image: registry:2
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: prod-docker-registry-registry-2-registry-config
+          mountPath: /etc/docker/registry/config.yml
+        - name: prod-docker-registry-registry-2-cert-pem
+          mountPath: /cert.pem
+      volumes:
+      - name: prod-docker-registry-registry-2-registry-config
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/registry_config_2.yml
+         type: FileOrCreate
+      - name: prod-docker-registry-registry-2-cert-pem
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/cert.pem
+         type: FileOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+#  name: prod-docker-registry-registry-1
+  namespace: central-docker-prod
+  labels:
+    app: prod-docker-registry-registry-1
+spec:
+  type: ClusterIP
+  selector:
+    app: prod-docker-registry-registry-1
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+---
+apiVersion: apps/v1beta2 # for versions before 1.8.0 use apps/v1beta1
+kind: Deployment
+metadata:
+  name: prod-docker-registry-registry-1
+  namespace: central-docker-prod
+spec:
+  selector:
+    matchLabels:
+      app: prod-docker-registry-registry-1
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      labels:
+        app: prod-docker-registry-registry-1
+      annotations:
+        com.trilogy.company: Aurea
+        com.trilogy.team: Central
+        com.trilogy.product: docker-registry
+        com.trilogy.service: registry
+        com.trilogy.stage: prod
+        com.trilogy.maintainer.email: khaled.massad@aurea.com
+        com.trilogy.maintainer.slack: khaled.massad
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-node-1
+      containers:
+      - name: prod-docker-registry-registry-1
+        image: registry:2
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: prod-docker-registry-registry-1-registry-config
+          mountPath: /etc/docker/registry/config.yml
+        - name: prod-docker-registry-registry-1-cert-pem
+          mountPath: /cert.pem
+      volumes:
+      - name: prod-docker-registry-registry-1-registry-config
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/registry_config.yml
+         type: FileOrCreate
+      - name: prod-docker-registry-registry-1-cert-pem
+        hostPath:
+         path: /srv/docker_volumes/container_data1/central-docker-prod/docker-registry/certs/cert.pem
+         type: FileOrCreate

@@ -1,0 +1,134 @@
+version: '2'
+services:
+  prod_docker-registry_apache_1:
+    image: "httpd:2.4"
+    container_name: prod_docker-registry_apache_1
+    restart: unless-stopped
+    hostname: registry2
+    domainname: swarm.devfactory.com
+    cpu_quota: 400000
+    mem_limit: 16g
+    labels:
+      com.trilogy.company: "Aurea"
+      com.trilogy.team: "Central"
+      com.trilogy.product: "docker-registry"
+      com.trilogy.service: "apache"
+      com.trilogy.stage: "prod"
+      com.trilogy.maintainer.skype: "khaled.massad"
+      com.trilogy.maintainer.email: "khaled.massad@aurea.com"
+    ports:
+      - "10.69.11.211:30654:80"
+      - "10.69.11.211:30291:443"
+    links:
+      - prod_docker-registry_registry_2:registry2
+      - prod_docker-registry_registry_1:registry
+      - prod_docker-registry_ui_1:ui
+      - prod_docker-registry_auth_1:auth-server
+    network_mode: bridge
+    volumes:
+      - "/opt/gp2/docker-registry/httpd.conf:/usr/local/apache2/conf/httpd.conf"
+      - "/opt/gp2/docker-registry/certs/star_swarm_devfactory.pem:/usr/local/apache2/conf/star_swarm_devfactory.pem"
+      - "/opt/gp2/docker-registry/certs/star_swarm_devfactory_key.pem:/usr/local/apache2/conf/star_swarm_devfactory_key.pem"
+      - "/opt/gp2/docker-registry/certs/star_devfactory.pem:/usr/local/apache2/conf/star_devfactory.pem"
+      - "/opt/gp2/docker-registry/certs/star_devfactory_key.pem:/usr/local/apache2/conf/star_devfactory_key.pem"
+      - "/opt/gp2/docker-registry/certs/DigiCertCA.crt:/usr/local/apache2/conf/DigiCertCA.crt"
+
+
+  prod_docker-registry_auth_1:
+    image: cesanta/docker_auth:stable
+    container_name: prod_docker-registry_auth_1
+    restart: unless-stopped
+    cpu_quota: 400000
+    mem_limit: 16g
+    labels:
+      com.trilogy.company: "Aurea"
+      com.trilogy.team: "Central"
+      com.trilogy.product: "docker-registry"
+      com.trilogy.service: "auth"
+      com.trilogy.stage: "prod"
+      com.trilogy.maintainer.skype: "khaled.massad"
+      com.trilogy.maintainer.email: "khaled.massad@aurea.com"
+    entrypoint:
+      - /docker_auth/auth_server
+  #    - "--v=3"
+  #    - "--alsologtostderr"
+      - "/config/auth_config.yml"
+    expose:
+      - "5001"
+    network_mode: bridge
+    volumes:
+      - "/opt/gp2/docker-registry/auth_config.yml:/config/auth_config.yml:rw"
+      - "/opt/gp2/docker-registry/auth_passwd:/config/auth_passwd:rw"
+      - "/opt/gp2/docker-registry/certs/cert.pem:/config/certs/cert.pem"
+      - "/opt/gp2/docker-registry/certs/key.pem:/config/certs/key.pem"
+
+
+  prod_docker-registry_ui_1:
+    image: konradkleine/docker-registry-frontend:v2
+    container_name: prod_docker-registry_ui_1
+    restart: unless-stopped
+    cpu_quota: 400000
+    mem_limit: 16g
+    labels:
+      com.trilogy.company: "Aurea"
+      com.trilogy.team: "Central"
+      com.trilogy.product: "docker-registry"
+      com.trilogy.service: "ui"
+      com.trilogy.stage: "prod"
+      com.trilogy.maintainer.skype: "khaled.massad"
+      com.trilogy.maintainer.email: "khaled.massad@aurea.com"
+    ports:
+      - "10.69.11.211:31211:80"
+    links:
+      - prod_docker-registry_registry_2:registry2
+    network_mode: bridge
+    environment:
+      - ENV_DOCKER_REGISTRY_HOST=registry2
+      - ENV_DOCKER_REGISTRY_PORT=5000
+      - ENV_USE_SSL=yes
+    volumes:
+      - "/opt/gp2/docker-registry/certs/cert.pem:/etc/apache2/server.crt"
+      - "/opt/gp2/docker-registry/certs/key.pem:/etc/apache2/server.key"
+
+
+  prod_docker-registry_registry_1:
+    image : "registry:2"
+    restart: unless-stopped
+    container_name: "prod_docker-registry_registry_1"
+    cpu_quota: 400000
+    mem_limit: 16g
+    labels:
+      com.trilogy.company: "Aurea"
+      com.trilogy.team: "Central"
+      com.trilogy.product: "docker-registry"
+      com.trilogy.service: "registry"
+      com.trilogy.stage: "prod"
+      com.trilogy.maintainer.skype: "khaled.massad"
+      com.trilogy.maintainer.email: "khaled.massad@aurea.com"
+    expose:
+      - "5000"
+    network_mode: bridge
+    volumes:
+      - "/opt/gp2/docker-registry/registry_config.yml:/etc/docker/registry/config.yml:rw"
+      - "/opt/gp2/docker-registry/certs/cert.pem:/cert.pem"
+
+  prod_docker-registry_registry_2:
+    image : "registry:2"
+    restart: unless-stopped
+    container_name: "prod_docker-registry_registry_2"
+    cpu_quota: 400000
+    mem_limit: 16g
+    labels:
+      com.trilogy.company: "Aurea"
+      com.trilogy.team: "Central"
+      com.trilogy.product: "docker-registry"
+      com.trilogy.service: "registry"
+      com.trilogy.stage: "prod"
+      com.trilogy.maintainer.skype: "khaled.massad"
+      com.trilogy.maintainer.email: "khaled.massad@aurea.com"
+    expose:
+      - "5000"
+    network_mode: bridge
+    volumes:
+      - "/opt/gp2/docker-registry/registry_config_2.yml:/etc/docker/registry/config.yml:rw"
+      - "/opt/gp2/docker-registry/certs/cert.pem:/cert.pem"
